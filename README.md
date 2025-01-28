@@ -31,28 +31,26 @@ This repository provides a set of ROS 2 packages to integrate [whisper.cpp](http
 
 To run whisper_ros with CUDA, first, you must install the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit).
 
+## Notes: Miguel
+
+### LM-Studio
+It is necessary to install LM-Studio and set up a model to run. If this is not done, the model will not respond.
+
+[lmstudio](https://lmstudio.ai/)
+
+After downloading, go to the "Developer" section (identified in green and located on the right-hand sidebar). Run a model —I suggest Llama— and enable the status slider to "Running." After this, you can proceed.
+
+## Install package
+
 ```shell
+mkdir ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/mgonzs13/audio_common.git
-git clone https://github.com/mgonzs13/whisper_ros.git
+git clone git@github.com:socialdroids/whisper_ros.git
 pip3 install -r whisper_ros/requirements.txt
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --cmake-args -DGGML_CUDA=ON # add this for CUDA
-```
-
-## Docker
-
-Build the whisper_ros docker. Additionally, you can choose to build whisper_ros with CUDA (`USE_CUDA`) and choose the CUDA version (`CUDA_VERSION`). Remember that you have to use `DOCKER_BUILDKIT=0` to compile whisper_ros with CUDA when building the image.
-
-```shell
-DOCKER_BUILDKIT=0 docker build -t whisper_ros --build-arg USE_CUDA=1 --build-arg CUDA_VERSION=12-6 .
-```
-
-Run the docker container. If you want to use CUDA, you have to install the [NVIDIA Container Tollkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) and add `--gpus all`.
-
-```shell
-docker run -it --rm --gpus all whisper_ros
 ```
 
 ## Usage
@@ -65,13 +63,7 @@ ros2 launch whisper_bringup whisper.launch.py
 
 ## Demos
 
-Send a goal action to listen:
-
-```shell
-ros2 action send_goal /whisper/listen whisper_msgs/action/STT "{}"
-```
-
-Or try the example of a whisper client:
+Try the example of a whisper client:
 
 ```shell
 ros2 run whisper_demos whisper_demo_node
