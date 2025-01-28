@@ -38,45 +38,47 @@ class WhisperDemoNode(Node):
 
         self._action_client = ActionClient(self, STT, "/whisper/listen")
         self.tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
+
+        self.client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
+
         self.saving = False
 
 
     def listen(self) -> None:
-        self.saving = False
-        goal = STT.Goal()
+        while True:
+            self.saving = False
+            goal = STT.Goal()
 
-        self._action_client.wait_for_server()
-        send_goal_future = self._action_client.send_goal_async(goal)
+            self._action_client.wait_for_server()
+            send_goal_future = self._action_client.send_goal_async(goal)
 
-        rclpy.spin_until_future_complete(self, send_goal_future)
-        get_result_future = send_goal_future.result().get_result_async()
-        self.get_logger().info("SPEAK")
+            rclpy.spin_until_future_complete(self, send_goal_future)
+            get_result_future = send_goal_future.result().get_result_async()
+            self.get_logger().info("SPEAK")
 
-        rclpy.spin_until_future_complete(self, get_result_future)
-        
-        result: STT.Result = get_result_future.result().result
-        self.get_logger().info(f"I hear: {result.transcription.text}")
-        self.get_logger().info(f"Audio time: {result.transcription.audio_time}")
-        self.get_logger().info(
-            f"Transcription time: {result.transcription.transcription_time}"
-        )
-
-        client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
-
-        mensagem_usuario = result.transcription.text
-        completion = client.chat.completions.create(
-        model="model-identifier",
-        messages=[
-            {"role": "user", "content": mensagem_usuario}  
-        ],
-        temperature=0.7,
-        )
-
-        self.get_logger().info(completion.choices[0].message.content)
-        self.get_logger().info("Save")
-        self.tts.tts_to_file(completion.choices[0].message.content, file_path="output.wav")
-        self.get_logger().info("Speaking")
-        os.system("mpv output.wav")
+            rclpy.spin_until_future_complete(self, get_result_future)
+            
+            result: STT.Result = get_result_future.result().result
+            self.get_logger().info(f"I hear: {result.transcription.text}")
+            self.get_logger().info(f"Audio time: {result.transcription.audio_time}")
+            self.get_logger().info(
+                f"Transcription time: {result.transcription.transcription_time}"
+            )
+            
+            mensagem_usuario = result.transcription.text
+            completion = self.client.chat.completions.create(
+            model="model-identifier",
+            messages=[
+                {"role": "user", "content": mensagem_usuario}  
+            ],
+            temperature=0.7,
+            )
+            cleaned_message = completion.choices[0].message.content
+            self.get_logger().info(cleaned_message)
+            self.get_logger().info("Save")
+            self.tts.tts_to_file(cleaned_message, file_path="output.wav")
+            self.get_logger().info("Speaking")
+            os.system("mpv output.wav")
 def main():
 
     rclpy.init()
