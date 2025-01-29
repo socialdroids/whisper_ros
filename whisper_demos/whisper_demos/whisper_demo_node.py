@@ -42,7 +42,7 @@ class WhisperDemoNode(Node):
         self.client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
 
         self.saving = False
-
+        self.history = []  
 
     def listen(self) -> None:
         while True:
@@ -57,7 +57,7 @@ class WhisperDemoNode(Node):
             self.get_logger().info("SPEAK")
 
             rclpy.spin_until_future_complete(self, get_result_future)
-            
+            self.get_logger().info("Generate results")
             result: STT.Result = get_result_future.result().result
             self.get_logger().info(f"I hear: {result.transcription.text}")
             self.get_logger().info(f"Audio time: {result.transcription.audio_time}")
@@ -66,15 +66,23 @@ class WhisperDemoNode(Node):
             )
             
             mensagem_usuario = result.transcription.text
+            self.get_logger().info(f"User: {mensagem_usuario}")
+
+            self.history.append({"role": "user", "content": mensagem_usuario})
+
+            messages = self.history
+
             completion = self.client.chat.completions.create(
-            model="model-identifier",
-            messages=[
-                {"role": "user", "content": mensagem_usuario}  
-            ],
-            temperature=0.7,
+                model="model-identifier",
+                messages=messages, 
+                temperature=0.7,
             )
             cleaned_message = completion.choices[0].message.content
-            self.get_logger().info(cleaned_message)
+            self.get_logger().info(f"Assistant: {cleaned_message}")
+
+
+            self.history.append({"role": "assistant", "content": cleaned_message})
+
             self.get_logger().info("Save")
             self.tts.tts_to_file(cleaned_message, file_path="output.wav")
             self.get_logger().info("Speaking")
