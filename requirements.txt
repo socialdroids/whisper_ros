@@ -1,3 +1,5 @@
 huggingface-hub==0.27.0
 openai==1.60.2
 TTS==0.22.0
+piper-phonemize~=1.1.0
+onnxruntime>=1.11.0,<2

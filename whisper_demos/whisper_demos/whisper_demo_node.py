@@ -30,6 +30,9 @@ from whisper_msgs.action import STT
 from openai import OpenAI
 from TTS.api import TTS
 import os
+import re
+from piper.voice import PiperVoice
+import wave
 
 class WhisperDemoNode(Node):
 
@@ -37,8 +40,9 @@ class WhisperDemoNode(Node):
         super().__init__("whisper_demo_node")
 
         self._action_client = ActionClient(self, STT, "/whisper/listen")
-        self.tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
-
+        # self.tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
+        self.model = "src/whisper_ros/whisper_demos/whisper_demos/models/en_US-lessac-medium.onnx"
+        self.voice = PiperVoice.load(self.model)
         self.client = OpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio")
 
         self.saving = False
@@ -67,7 +71,7 @@ class WhisperDemoNode(Node):
             
             mensagem_usuario = result.transcription.text
             self.get_logger().info(f"User: {mensagem_usuario}")
-
+        
             self.history.append({"role": "user", "content": mensagem_usuario})
 
             messages = self.history
@@ -78,15 +82,33 @@ class WhisperDemoNode(Node):
                 temperature=0.7,
             )
             cleaned_message = completion.choices[0].message.content
+            position = cleaned_message.find("</thing>")
+
+            if position != -1:  # Se encontrado
+                cleaned_message = cleaned_message[position + len("</thing>"):]
+            clear_response = re.sub(r'[^\w\s,.\-:();""]', '', cleaned_message)  # Remove caracteres especiais
+            clear_response = re.sub(r'[\*\+\-]', '', clear_response)  # Remove os marcadores de lista (asterisco, mais, menos)
+            clear_response = " ".join(clear_response.split())
             self.get_logger().info(f"Assistant: {cleaned_message}")
 
 
             self.history.append({"role": "assistant", "content": cleaned_message})
 
+            # self.get_logger().info("Save")
+            # self.tts.tts_to_file(cleaned_message, file_path="output.wav")
+            # self.get_logger().info("Speaking")
+            # os.system("mpv output.wav")
+
             self.get_logger().info("Save")
-            self.tts.tts_to_file(cleaned_message, file_path="output.wav")
+            wav_file = wave.open("audio.wav", "w")
+            audio = self.voice.synthesize(clear_response, wav_file)
             self.get_logger().info("Speaking")
-            os.system("mpv output.wav")
+            os.system("mpv audio.wav")
+            self.get_logger().info(f"{mensagem_usuario.lower(),'finish' in mensagem_usuario.lower().replace('.', ''), 'conversation'  in mensagem_usuario.lower().replace('.', '')}")
+            if "finish" in mensagem_usuario.lower().replace('.', '') and "conversation"  in mensagem_usuario.lower().replace('.', ''):
+                self.get_logger().info("Exit...")
+                break
+
 def main():
 
     rclpy.init()
