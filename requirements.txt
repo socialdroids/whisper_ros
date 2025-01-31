@@ -2,4 +2,7 @@ huggingface-hub==0.27.0
 openai==1.60.2
 TTS==0.22.0
 piper-phonemize~=1.1.0
-onnxruntime>=1.11.0,<2
+onnxruntime>=1.11.0
+llama-cpp-python==0.3.7
+llama_cpp_agent=0.2.35
+piper-tts==1.2.0    
